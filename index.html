@@ -89,11 +89,11 @@
     display: flex; 
     justify-content: space-between; 
     align-items: center; 
-    margin: 12px auto; /* Thay margin 20px cố định bằng auto để tự căn giữa block */
+    margin: 12px auto; 
     font-size: 16px; 
     font-weight: bold; 
-    max-width: 260px; /* Giới hạn chiều rộng vùng điều khiển để ép nó gom vào giữa panel */
-    width: 100%; /* Đảm bảo co giãn tốt */
+    max-width: 260px; 
+    width: 100%; 
   }
   
   .switch { position: relative; display: inline-block; width: 55px; height: 30px; flex-shrink: 0; }
@@ -266,27 +266,27 @@ let historyChart = new Chart(document.getElementById('historyChart'), {
         borderWidth: 2,
         yAxisID: 'y-temp',
         tension: 0.3,
-        pointRadius: 3 
+        pointRadius: 1 // Đã thu nhỏ các chấm lại gọn gàng
       },
       {
         label: 'Độ ẩm không khí (%)',
         data: [],
-        borderColor: '#4CAF50', 
-        backgroundColor: 'rgba(76, 175, 80, 0.05)',
-        borderWidth: 2,
-        yAxisID: 'y-soil', 
-        tension: 0.3,
-        pointRadius: 3
-      },
-      {
-        label: 'Độ ẩm đất (%)',
-        data: [],
-        borderColor: '#2196F3', 
+        borderColor: '#2196F3', // Đổi sang Xanh nước biển
         backgroundColor: 'rgba(33, 150, 243, 0.05)',
         borderWidth: 2,
         yAxisID: 'y-soil', 
         tension: 0.3,
-        pointRadius: 3
+        pointRadius: 1 // Đã thu nhỏ các chấm lại gọn gàng
+      },
+      {
+        label: 'Độ ẩm đất (%)',
+        data: [],
+        borderColor: '#4CAF50', // Đổi sang Xanh lá cây
+        backgroundColor: 'rgba(76, 175, 80, 0.05)',
+        borderWidth: 2,
+        yAxisID: 'y-soil', 
+        tension: 0.3,
+        pointRadius: 1 // Đã thu nhỏ các chấm lại gọn gàng
       },
       {
         label: 'Trạng thái bơm (Bật/Tắt)',
