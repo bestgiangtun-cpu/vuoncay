@@ -44,10 +44,10 @@
     padding: 20px; 
     border-radius: 10px; 
     box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
-    display: block; /* Đổi sang block để dễ kiểm soát wrapper bên trong */
+    display: block; 
   }
 
-  /* KHUNG CHỨA BIỂU ĐỒ - ÉP CHIỀU CAO CỐ ĐỊNH FIX LỖI IPHONE */
+  /* KHUNG CHỨA BIỂU ĐỒ */
   .chart-container {
     position: relative;
     width: 100%;
@@ -86,7 +86,7 @@
   /* KHE ĐIỀU KHIỂN */
   .control-box { 
     border-top: 1px solid #eee; 
-    padding-top: 20px; 
+    padding-top: 15px; 
     padding-bottom: 10px;
   }
   
@@ -108,28 +108,79 @@
   input:checked + .slider { background-color: #2196F3; }
   input:checked + .slider:before { transform: translateX(25px); }
   
-  .disabled { opacity: 0.5; pointer-events: none; }
+  .disabled { opacity: 0.4; pointer-events: none; transition: opacity 0.3s; }
 
-  /* ========== ĐOẠN ĐẶC BIỆT TỰ ĐỘNG FIX CHO MÀN HÌNH ĐIỆN THOẠI ========== */
+  /* CẤU TRÚC KHUNG CẤU HÌNH NGƯỠNG */
+  .config-box {
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+    margin-top: 5px;
+  }
+  .config-title {
+    font-size: 15px;
+    font-weight: bold;
+    color: #0076a3;
+    margin: 0 0 12px 0;
+    text-align: center;
+  }
+  .config-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 5px;
+  }
+  .config-group {
+    display: flex;
+    flex-direction: column;
+    transition: opacity 0.3s;
+  }
+  .config-group label {
+    font-size: 12px;
+    font-weight: bold;
+    color: #555;
+    margin-bottom: 4px;
+  }
+  .config-group input {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    color: #222;
+    background-color: #fafafa;
+  }
+  .config-group input:focus {
+    border-color: #2196F3;
+    background-color: #fff;
+    outline: none;
+  }
+  .config-group input:disabled {
+    background-color: #eee;
+    color: #999;
+    cursor: not-allowed;
+  }
+
+  /* ĐA CHỈNH SỬA CHO ĐIỆN THOẠI */
   @media (max-width: 768px) {
     body { padding: 10px; }
     .dashboard-layout { 
-      flex-direction: column; /* Chuyển thành một hàng dọc */
+      flex-direction: column; 
     }
     .left-panel { 
-      min-width: 100%; /* Bảng điều khiển tràn ngang điện thoại */
+      min-width: 100%; 
       box-sizing: border-box;
       margin-bottom: 15px;
     }
     .right-panel { 
-      width: 100%; /* Khung biểu đồ tràn ngang điện thoại */
+      width: 100%; 
       box-sizing: border-box;
     }
     .chart-container {
-      height: 340px; /* Thu nhỏ chiều cao biểu đồ một chút trên mobile cho đẹp */
+      height: 340px; 
     }
     .gauge-value {
-      font-size: 15px; /* Giảm size chữ số vòng tròn trên mobile tránh tràn viền */
+      font-size: 15px; 
     }
   }
 </style>
@@ -185,6 +236,37 @@
         </label>
       </div>
     </div>
+
+    <div class="config-box">
+      <div class="config-title">⚙️ Cấu Hình Ngưỡng AUTO</div>
+      
+      <div class="control-row" style="max-width: 100%; margin-bottom: 15px; border-bottom: 1px dashed #eee; padding-bottom: 10px;">
+        <span style="font-size: 14px; color: #444;">Sử dụng Nhiệt độ</span>
+        <label class="switch">
+          <input type="checkbox" id="tempEnSwitch" checked onchange="onTempSwitchChange()">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="config-grid">
+        <div class="config-group">
+          <label>Độ ẩm đất BẬT (%)</label>
+          <input type="number" id="soilOnInput" min="0" max="100" value="30" onchange="sendThresholdConfig()">
+        </div>
+        <div class="config-group">
+          <label>Độ ẩm đất TẮT (%)</label>
+          <input type="number" id="soilOffInput" min="0" max="100" value="60" onchange="sendThresholdConfig()">
+        </div>
+        <div class="config-group" id="tempOnGroup">
+          <label>Nhiệt độ BẬT (°C)</label>
+          <input type="number" id="tempOnInput" step="0.1" value="38" onchange="sendThresholdConfig()">
+        </div>
+        <div class="config-group" id="tempOffGroup">
+          <label>Nhiệt độ TẮT (°C)</label>
+          <input type="number" id="tempOffInput" step="0.1" value="30" onchange="sendThresholdConfig()">
+        </div>
+      </div>
+    </div>
   </div>
   
   <div class="right-panel">
@@ -206,6 +288,7 @@ const clientId = "Web_User_" + Math.random().toString(16).substr(2, 8);
 const topic_sub_data = "giangtun/garden/data";
 const topic_pub_pump = "giangtun/garden/pump/cmd";
 const topic_pub_auto = "giangtun/garden/auto/cmd";
+const topic_pub_config = "giangtun/garden/config/cmd"; 
 
 let historyData = [];
 const FIVE_HOURS_MS = 5 * 60 * 60 * 1000; 
@@ -269,11 +352,7 @@ function createGaugeConfig(color, maxVal) {
       plugins: { tooltip: { enabled: false }, legend: { display: false } },
       responsive: true,
       maintainAspectRatio: true,
-      layout: {
-        padding: {
-          bottom: -40
-        }
-      }
+      layout: { padding: { bottom: -40 } }
     }
   };
 }
@@ -325,7 +404,6 @@ let historyChart = new Chart(document.getElementById('historyChart'), {
         backgroundColor: 'rgba(33, 150, 243, 0.15)', 
         borderWidth: 1,
         fill: 'origin',       
-        navigator: true,       
         stepped: true,        
         yAxisID: 'y-pump',    
         pointRadius: 0        
@@ -349,7 +427,7 @@ let historyChart = new Chart(document.getElementById('historyChart'), {
         max: bounds.max,
         ticks: {
           autoSkip: true,       
-          maxTicksLimit: 7, /* Giảm số lượng mốc giờ lại một chút cho đỡ chật trên điện thoại */    
+          maxTicksLimit: 7,     
           includeBounds: true,  
           
           callback: function(val, index, ticks) {
@@ -393,6 +471,27 @@ setInterval(function() {
   historyChart.options.scales.x.min = currentBounds.min;
   historyChart.update('none'); 
 }, 1000);
+
+// --- Hàm xử lý ẩn/hiện khóa ô nhập nhiệt độ khi gạt switch ---
+function toggleTempInputs() {
+  let isEnabled = document.getElementById("tempEnSwitch").checked;
+  document.getElementById("tempOnInput").disabled = !isEnabled;
+  document.getElementById("tempOffInput").disabled = !isEnabled;
+  
+  if (isEnabled) {
+    document.getElementById("tempOnGroup").classList.remove("disabled");
+    document.getElementById("tempOffGroup").classList.remove("disabled");
+  } else {
+    document.getElementById("tempOnGroup").classList.add("disabled");
+    document.getElementById("tempOffGroup").classList.add("disabled");
+  }
+}
+
+// Xử lý sự kiện khi gạt switch nhiệt độ độc lập
+function onTempSwitchChange() {
+  toggleTempInputs();
+  sendThresholdConfig();
+}
 
 // ====================== XỬ LÝ KHI DỮ LIỆU TỚI ======================
 function onMessageArrived(message) {
@@ -443,6 +542,27 @@ function onMessageArrived(message) {
       } else {
         document.getElementById("pumpRow").classList.remove("disabled");
       }
+
+      // ========== TỰ ĐỘNG ĐỒNG BỘ CÁC NGƯỠNG TỪ MẠCH LÊN Ô NHẬP WEB ==========
+      if (data.soilOn !== undefined && document.activeElement !== document.getElementById("soilOnInput")) {
+        document.getElementById("soilOnInput").value = data.soilOn;
+      }
+      if (data.soilOff !== undefined && document.activeElement !== document.getElementById("soilOffInput")) {
+        document.getElementById("soilOffInput").value = data.soilOff;
+      }
+      if (data.tempOn !== undefined && document.activeElement !== document.getElementById("tempOnInput")) {
+        document.getElementById("tempOnInput").value = data.tempOn;
+      }
+      if (data.tempOff !== undefined && document.activeElement !== document.getElementById("tempOffInput")) {
+        document.getElementById("tempOffInput").value = data.tempOff;
+      }
+      
+      // Đồng bộ trạng thái nút kiểm soát nhiệt độ từ ESP32 đưa lên
+      if (data.tempEn !== undefined && document.activeElement !== document.getElementById("tempEnSwitch")) {
+        document.getElementById("tempEnSwitch").checked = data.tempEn;
+        toggleTempInputs(); 
+      }
+
     } catch (e) {
       console.log("Lỗi xử lý dữ liệu:", e);
     }
@@ -455,6 +575,11 @@ function toggleAuto() {
   let message = new Paho.MQTT.Message(msg);
   message.destinationName = topic_pub_auto;
   mqttClient.send(message);
+
+  // THAY ĐỔI TẠI ĐÂY: Tự động gửi cấu hình ngưỡng hiện tại lên mạch ngay khi bật chế độ AUTO
+  if (isChecked) {
+    sendThresholdConfig();
+  }
 }
 
 function togglePump() {
@@ -463,6 +588,35 @@ function togglePump() {
   let message = new Paho.MQTT.Message(msg);
   message.destinationName = topic_pub_pump;
   mqttClient.send(message);
+}
+
+// ========== ĐÃ SỬA: TỰ ĐỘNG BẮN DỮ LIỆU KHÔNG HIỆN POPUP ALERT GÂY PHIỀN ==========
+function sendThresholdConfig() {
+  let sOn = parseInt(document.getElementById("soilOnInput").value);
+  let sOff = parseInt(document.getElementById("soilOffInput").value);
+  let tOn = parseFloat(document.getElementById("tempOnInput").value);
+  let tOff = parseFloat(document.getElementById("tempOffInput").value);
+  let tEn = document.getElementById("tempEnSwitch").checked; 
+
+  // Đóng gói payload JSON gửi xuống ESP32
+  let configPayload = {
+    soilOn: sOn,
+    soilOff: sOff,
+    tempOn: tOn,
+    tempOff: tOff,
+    tempEn: tEn 
+  };
+
+  let jsonString = JSON.stringify(configPayload);
+  let message = new Paho.MQTT.Message(jsonString);
+  message.destinationName = topic_pub_config;
+  
+  try {
+    mqttClient.send(message);
+    console.log("Đã tự động cập nhật cấu hình ngưỡng xuống MQTT:", configPayload);
+  } catch (error) {
+    console.error("Lỗi gửi MQTT tự động:", error);
+  }
 }
 </script>
 </body>
